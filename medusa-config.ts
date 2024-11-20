@@ -1,8 +1,8 @@
-import { loadEnv, defineConfig } from '@medusajs/framework/utils';
+import { loadEnv, defineConfig, Modules } from '@medusajs/framework/utils';
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd());
 
-let dynamicModules = {}; // Changed to let
+const dynamicModules = {};
 
 const stripeApiKey = process.env.STRIPE_API_KEY;
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -11,7 +11,7 @@ const isStripeConfigured = Boolean(stripeApiKey) && Boolean(stripeWebhookSecret)
 
 if (isStripeConfigured) {
   console.log('Stripe API key and webhook secret found. Enabling payment module');
-  dynamicModules = {
+  dynamicModules[Modules.PAYMENT] = {
     resolve: '@medusajs/medusa/payment',
     options: {
       providers: [
@@ -29,8 +29,8 @@ if (isStripeConfigured) {
   };
 }
 
-const modules = [ // Define modules as an array
-  {
+const modules = {
+  [Modules.FILE]: {
     resolve: '@medusajs/medusa/file',
     options: {
       providers: [
@@ -49,7 +49,7 @@ const modules = [ // Define modules as an array
       ],
     },
   },
-  {
+  [Modules.NOTIFICATION]: {
     resolve: '@medusajs/medusa/notification',
     options: {
       providers: [
@@ -62,25 +62,25 @@ const modules = [ // Define modules as an array
             fromEmail: process.env.RESEND_FROM_EMAIL,
             replyToEmail: process.env.RESEND_REPLY_TO_EMAIL,
             toEmail: process.env.TO_EMAIL,
-            enableEmails: process.env.ENABLE_EMAIL_NOTIFICATIONS,
+            enableEmails: process.env.ENABLE_EMAIL_NOTIFICATIONS === 'true',
           },
         },
       ],
     },
   },
-  {
+  [Modules.CACHE]: {
     resolve: '@medusajs/medusa/cache-redis',
     options: {
       redisUrl: process.env.REDIS_URL,
     },
   },
-  {
+  [Modules.EVENT_BUS]: {
     resolve: '@medusajs/medusa/event-bus-redis',
     options: {
       redisUrl: process.env.REDIS_URL,
     },
   },
-  {
+  [Modules.WORKFLOW_ENGINE]: {
     resolve: '@medusajs/medusa/workflow-engine-redis',
     options: {
       redis: {
@@ -88,20 +88,12 @@ const modules = [ // Define modules as an array
       },
     },
   },
-];
+};
 
 module.exports = defineConfig({
-  modules: [
-    ...modules, // Spread existing modules
-    dynamicModules, // Add dynamicModules
-  ],
-  admin: {
-    backendUrl: process.env.BACKEND_URL || 'http://localhost:9000',
-    disable: process.env.DISABLE_MEDUSA_ADMIN === 'true',
-  },
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
-    workerMode: process.env.MEDUSA_WORKER_MODE as "shared" | "worker" | "server", // Provide a default value
+    workerMode: process.env.MEDUSA_WORKER_MODE as 'shared' | 'worker' | 'server',
     http: {
       storeCors: process.env.STORE_CORS || '',
       adminCors: process.env.ADMIN_CORS || '',
@@ -110,5 +102,13 @@ module.exports = defineConfig({
       cookieSecret: process.env.COOKIE_SECRET || 'supersecret',
     },
     redisUrl: process.env.REDIS_URL,
+  },
+  admin: {
+    backendUrl: process.env.BACKEND_URL || 'http://localhost:9000',
+    disable: process.env.DISABLE_MEDUSA_ADMIN === 'true',
+  },
+  modules: {
+    ...modules,
+    ...dynamicModules,
   },
 });
