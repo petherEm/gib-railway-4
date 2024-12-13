@@ -12,7 +12,7 @@ type ModuleOptions = {
   fromEmail: string;
   replyToEmail: string;
   toEmail: string;
-  enableEmails: string;
+  enableEmails: string | boolean; // Allow both string and boolean
 };
 
 export enum ResendNotificationTemplates {
@@ -32,27 +32,52 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
 
     this.resend = new Resend(options.apiKey);
     this.options = options;
+
+    // Add explicit log for initialization
+    // console.log('ResendNotificationProviderService initialized with options:', {
+    //   fromEmail: options.fromEmail,
+    //   enableEmails: options.enableEmails
+    // });
   }
 
   // Send mail
   private async sendMail(subject: string, body: any, toEmail?: string) {
-    if (this.options.enableEmails.toLowerCase() !== 'true') {
-      return {};
+    try {
+      // Log the input parameters
+      console.log('Attempting to send email with:', {
+        enabled: this.options.enableEmails,
+        to: toEmail || this.options.toEmail,
+        subject,
+        fromEmail: this.options.fromEmail
+      });
+
+      const isEnabled = String(this.options.enableEmails).toLowerCase() === 'true';
+      
+      if (!isEnabled) {
+        console.log('Emails are disabled. Enable them by setting enableEmails to "true"');
+        return {};
+      }
+
+      const { data, error } = await this.resend.emails.send({
+        from: this.options.fromEmail,
+        replyTo: this.options.replyToEmail,
+        to: [toEmail ? toEmail : this.options.toEmail],
+        subject: subject,
+        react: body
+      });
+
+      // Log the response
+      // console.log('Resend API response:', { data, error });
+
+      if (error) {
+        throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, error.message);
+      }
+
+      return data!;
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw error;
     }
-
-    const { data, error } = await this.resend.emails.send({
-      from: this.options.fromEmail,
-      replyTo: this.options.replyToEmail,
-      to: [toEmail ? toEmail : this.options.toEmail],
-      subject: subject,
-      react: body
-    });
-
-    if (error) {
-      throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, error.message);
-    }
-
-    return data!;
   }
 
   // Send order placed mail

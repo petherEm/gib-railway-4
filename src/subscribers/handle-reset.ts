@@ -19,6 +19,8 @@ export default async function resetPasswordTokenHandler({
 
   const urlPrefix = 'https://gibbarosa.io'
 
+  console.log(`Sending reset password email to ${email}`)
+
   await notificationModuleService.createNotifications({
     to: email,
     channel: "email",
