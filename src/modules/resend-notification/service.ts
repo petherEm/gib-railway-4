@@ -1,3 +1,4 @@
+// service.ts
 import { ProviderSendNotificationDTO } from '@medusajs/types';
 import { AbstractNotificationProviderService, MedusaError } from '@medusajs/utils';
 
@@ -6,6 +7,7 @@ import { Resend } from 'resend';
 import { validateModuleOptions } from '../../utils/validate-module-options';
 import { OrderPlacedEmailTemplate } from './email-templates/order-placed';
 import { ResetPasswordEmailTemplate } from './email-templates/reset-password';
+import { InviteAdminEmailTemplate } from './email-templates/invite-admin';
 
 type ModuleOptions = {
   apiKey: string;
@@ -17,7 +19,8 @@ type ModuleOptions = {
 
 export enum ResendNotificationTemplates {
   ORDER_PLACED = 'order-placed',
-  RESET_PASSWORD = 'reset-password'
+  RESET_PASSWORD = 'reset-password',
+  INVITE_ADMIN = 'invite-admin',
 }
 
 class ResendNotificationProviderService extends AbstractNotificationProviderService {
@@ -32,42 +35,26 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
 
     this.resend = new Resend(options.apiKey);
     this.options = options;
-
-    // Add explicit log for initialization
-    // console.log('ResendNotificationProviderService initialized with options:', {
-    //   fromEmail: options.fromEmail,
-    //   enableEmails: options.enableEmails
-    // });
   }
 
-  // Send mail
   private async sendMail(subject: string, body: any, toEmail?: string) {
+    const isEnabled = typeof this.options.enableEmails === "boolean"
+      ? this.options.enableEmails
+      : String(this.options.enableEmails).toLowerCase() === "true";
+
+    if (!isEnabled) {
+      console.log("Emails are disabled. Enable them by setting enableEmails to true.");
+      return {};
+    }
+
     try {
-      // Log the input parameters
-      console.log('Attempting to send email with:', {
-        enabled: this.options.enableEmails,
-        to: toEmail || this.options.toEmail,
-        subject,
-        fromEmail: this.options.fromEmail
-      });
-
-      const isEnabled = String(this.options.enableEmails).toLowerCase() === 'true';
-      
-      if (!isEnabled) {
-        console.log('Emails are disabled. Enable them by setting enableEmails to "true"');
-        return {};
-      }
-
       const { data, error } = await this.resend.emails.send({
         from: this.options.fromEmail,
         replyTo: this.options.replyToEmail,
-        to: [toEmail ? toEmail : this.options.toEmail],
+        to: [toEmail || this.options.toEmail],
         subject: subject,
-        react: body
+        react: body,
       });
-
-      // Log the response
-      // console.log('Resend API response:', { data, error });
 
       if (error) {
         throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, error.message);
@@ -75,12 +62,11 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
 
       return data!;
     } catch (error) {
-      console.error('Error sending email:', error);
+      console.error(`Failed to send email to ${toEmail || this.options.toEmail} with subject: ${subject}`, error);
       throw error;
     }
   }
 
-  // Send order placed mail
   private async sendOrderPlacedMail(notification: ProviderSendNotificationDTO) {
     const orderData = { order: notification?.data };
     const dynamicSubject = notification?.data?.subject as string;
@@ -92,30 +78,57 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
     );
   }
 
-    // Send reset password mail
   private async sendResetPasswordMail(notification: ProviderSendNotificationDTO) {
     const url = notification?.data?.url as string;
     const dynamicSubject = notification?.data?.subject as string;
 
     return await this.sendMail(
       dynamicSubject,
-      ResetPasswordEmailTemplate({url}),
+      ResetPasswordEmailTemplate({ url }),
+      notification.to
+    );
+  }
+
+  private async sendInviteAdminMail(notification: ProviderSendNotificationDTO) {
+    return await this.sendMail(
+      notification.data.subject || 'Admin Team Invitation',
+      InviteAdminEmailTemplate({
+        token: notification.data.token,
+        user: notification.data.user
+      }),
       notification.to
     );
   }
 
   async send(notification: ProviderSendNotificationDTO) {
+    console.log('Sending notification:', notification.template);
+    
     switch (notification.template) {
-      case ResendNotificationTemplates.ORDER_PLACED.toString():
+      case ResendNotificationTemplates.ORDER_PLACED:
         return await this.sendOrderPlacedMail(notification);
 
-       case ResendNotificationTemplates.RESET_PASSWORD.toString():
+      case ResendNotificationTemplates.RESET_PASSWORD:
         return await this.sendResetPasswordMail(notification);
+
+      case ResendNotificationTemplates.INVITE_ADMIN:
+        return await this.sendInviteAdminMail(notification);
     }
 
     return {};
   }
 
+  async sendNotification(
+    event: string,
+    data: ProviderSendNotificationDTO,
+    attachmentGenerator: unknown
+  ): Promise<{ to: string; status: string; data: Record<string, unknown> }> {
+    const result = await this.send(data);
+    return {
+      to: data.to,
+      status: "done",
+      data: result,
+    };
+  }
 }
 
 export default ResendNotificationProviderService;

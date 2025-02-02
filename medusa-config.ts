@@ -22,6 +22,7 @@ if (isStripeConfigured) {
             apiKey: stripeApiKey,
             webhookSecret: stripeWebhookSecret,
             capture: true,
+            
           },
         },
       ],
