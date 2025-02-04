@@ -11,7 +11,7 @@ export const InviteAdminEmailTemplate: React.FC<
   Readonly<EmailTemplateProps>
 > = ({ token, user }) => {
   const inviteUrl = `${
-    process.env.ADMIN_INVITE_URL_PREFIX || "https://gibbarosa.io"
+    process.env.ADMIN_INVITE_URL_PREFIX || "https://admin.gibbarosa.io"
   }/invite?token=${token}`;
 
   return (

@@ -23,8 +23,17 @@ export const OrderPlacedEmailTemplate: React.FC<
     >
       <h1
         style={{
-          fontSize: "24px",
+          fontSize: "36px",
           fontWeight: "600",
+          marginBottom: "24px",
+        }}
+      >
+        Gibbarosa
+      </h1>
+      <h1
+        style={{
+          fontSize: "24px",
+          fontWeight: "400",
           marginBottom: "24px",
         }}
       >
@@ -39,8 +48,8 @@ export const OrderPlacedEmailTemplate: React.FC<
         }}
       >
         Thank you for shopping at{" "}
-        <span style={{ fontWeight: "600" }}>SOLACE</span>. Your order has been
-        received and is being processed.
+        <span style={{ fontWeight: "600" }}>Gibbarosa</span>. Your order has
+        been received and is being processed.
       </p>
       <p
         style={{
@@ -260,13 +269,13 @@ export const OrderPlacedEmailTemplate: React.FC<
         <p>
           Do you have any questions? Write to us{" "}
           <a
-            href="mailto:solace@rigbydev.pl"
+            href="mailto:info@gibbarosa.com"
             style={{
               color: "#6C6C6C !important",
               textDecoration: "none !important",
             }}
           >
-            solace@rigbydev.pl
+            info@gibbarosa.com
           </a>
         </p>
       </div>

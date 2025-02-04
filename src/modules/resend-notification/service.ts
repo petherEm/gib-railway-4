@@ -1,9 +1,7 @@
 // service.ts
 import { ProviderSendNotificationDTO } from '@medusajs/types';
 import { AbstractNotificationProviderService, MedusaError } from '@medusajs/utils';
-
 import { Resend } from 'resend';
-
 import { validateModuleOptions } from '../../utils/validate-module-options';
 import { OrderPlacedEmailTemplate } from './email-templates/order-placed';
 import { ResetPasswordEmailTemplate } from './email-templates/reset-password';
@@ -93,8 +91,8 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
     return await this.sendMail(
       notification.data.subject || 'Admin Team Invitation',
       InviteAdminEmailTemplate({
-        token: notification.data.token,
-        user: notification.data.user
+        token: notification.data.token as string,
+        user: notification.data.user as { email: string; first_name?: string; last_name?: string },
       }),
       notification.to
     );
